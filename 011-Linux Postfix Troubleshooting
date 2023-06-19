@@ -1,0 +1,10 @@
+Some users of the monitoring app have reported issues with xFusionCorp Industries mail server. 
+They have a mail server in Stork DC where they are using postfix mail transfer agent. Postfix service seems to fail. Try to identify the root cause and fix it.
+
+Solution:
+
+systemctl start postfix
+
+Identity the error
+
+sed -i -e 's/inet_interfaces = localhost/#inet_interfaces = localhost/g' /etc/postfix/main.cf
