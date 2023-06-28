@@ -1,0 +1,5 @@
+Solution:
+
+vi /etc/resolv.conf
+
+add --> 'nameserver 8.8.8.8'
