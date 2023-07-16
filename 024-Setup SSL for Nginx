@@ -1,0 +1,139 @@
+The system admins team of xFusionCorp Industries needs to deploy a new application on App Server 1 in Stratos Datacenter.
+They have some pre-requites to get ready that server for application deployment. Prepare the server as per requirements shared below:
+
+Install and configure nginx on App Server 1.
+On App Server 1 there is a self signed SSL certificate and key present at location /tmp/nautilus.crt and /tmp/nautilus.key.
+Move them to some appropriate location and deploy the same in Nginx.
+
+Create an index.html file with content Welcome! under Nginx document root.
+For final testing try to access the App Server 1 link (either hostname or IP) from jump host using curl command. For example curl -Ik https://<app-server-ip>/.
+
+Solution:
+
+ssh tony@stapp01
+sudo su
+yum update
+yum install epel-release -y
+yum install nginx -y
+cd /etc/nginx/
+mkdir ssl
+cp /tmp/nautilus.crt ./ssl/
+cp /tmp/nautilus.key ./ssl/
+vi nginx.conf
+(see below for nginx.conf)
+
+[root@stapp01 tony]# ls -lart /usr/share/nginx/html/
+total 24
+-rw-r--r-- 1 root root  368 Nov 10  2022 nginx-logo.png
+-rw-r--r-- 1 root root 3693 Nov 10  2022 50x.html
+-rw-r--r-- 1 root root 3650 Nov 10  2022 404.html
+lrwxrwxrwx 1 root root   14 Jul 16 03:50 poweredby.png -> nginx-logo.png
+lrwxrwxrwx 1 root root   25 Jul 16 03:50 index.html -> ../../doc/HTML/index.html
+lrwxrwxrwx 1 root root   18 Jul 16 03:50 img -> ../../doc/HTML/img
+drwxr-xr-x 2 root root 4096 Jul 16 03:50 icons
+lrwxrwxrwx 1 root root   20 Jul 16 03:50 en-US -> ../../doc/HTML/en-US
+drwxr-xr-x 4 root root 4096 Jul 16 03:50 ..
+drwxr-xr-x 3 root root 4096 Jul 16 03:50 .
+
+
+cd ../../doc/HTML/
+[root@stapp01 HTML]# pwd
+/usr/share/doc/HTML
+
+echo 'Welcome!' > index.html 
+
+systemctl start nginx
+systemctl status nginx
+
+exit;exit
+
+In jump server:
+curl -Ik https://stapp01
+
+
+
+nginx.conf
+--------------------------
+# For more information on configuration, see:
+#   * Official English Documentation: http://nginx.org/en/docs/
+#   * Official Russian Documentation: http://nginx.org/ru/docs/
+
+user nginx;
+worker_processes auto;
+error_log /var/log/nginx/error.log;
+pid /run/nginx.pid;
+
+# Load dynamic modules. See /usr/share/doc/nginx/README.dynamic.
+include /usr/share/nginx/modules/*.conf;
+
+events {
+    worker_connections 1024;
+}
+
+http {
+    log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+                      '$status $body_bytes_sent "$http_referer" '
+                      '"$http_user_agent" "$http_x_forwarded_for"';
+
+    access_log  /var/log/nginx/access.log  main;
+
+    sendfile            on;
+    tcp_nopush          on;
+    tcp_nodelay         on;
+    keepalive_timeout   65;
+    types_hash_max_size 4096;
+
+    include             /etc/nginx/mime.types;
+    default_type        application/octet-stream;
+
+    # Load modular configuration files from the /etc/nginx/conf.d directory.
+    # See http://nginx.org/en/docs/ngx_core_module.html#include
+    # for more information.
+    include /etc/nginx/conf.d/*.conf;
+
+    server {
+        listen       80;
+        listen       [::]:80;
+        server_name  _;
+        root         /usr/share/nginx/html;
+
+        # Load configuration files for the default server block.
+        include /etc/nginx/default.d/*.conf;
+
+        error_page 404 /404.html;
+        location = /404.html {
+        }
+
+        error_page 500 502 503 504 /50x.html;
+        location = /50x.html {
+        }
+    }
+
+# Settings for a TLS enabled server.
+#
+    server {
+        listen       443 ssl http2;
+        listen       [::]:443 ssl http2;
+        server_name  _;
+        root         /usr/share/nginx/html;
+#
+        ssl_certificate "/etc/nginx/ssl/nautilus.crt";
+        ssl_certificate_key "/etc/nginx/ssl/nautilus.key";
+        ssl_session_cache shared:SSL:1m;
+        ssl_session_timeout  10m;
+        ssl_ciphers HIGH:!aNULL:!MD5;
+        ssl_prefer_server_ciphers on;
+#
+#        # Load configuration files for the default server block.
+        include /etc/nginx/default.d/*.conf;
+#
+        error_page 404 /404.html;
+            location = /40x.html {
+        }
+#
+        error_page 500 502 503 504 /50x.html;
+            location = /50x.html {
+        }
+    }
+
+}
