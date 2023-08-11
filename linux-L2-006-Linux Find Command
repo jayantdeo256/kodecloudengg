@@ -1,0 +1,4 @@
+
+Solution:
+
+find /var/www/html/official/ -name '*.php' -type f -exec cp --parents -r {} /official/ \;
